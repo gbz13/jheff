@@ -16,27 +16,26 @@ const client = new Client({
 });
 
 // CONFIG
-const CARGO_VERIFICADO = 'COLOCA_ID_AQUI';
-const CARGO_NAO_VERIFICADO = ''; // opcional (pode deixar vazio)
+const CARGO_VERIFICADO = '1484398440497549424';
+const CARGO_NAO_VERIFICADO = ''; // opcional
 
-// ONLINE
 client.once('clientReady', () => {
-  console.log(`✅ Bot de verificação online: ${client.user.tag}`);
+  console.log(`✅ Bot online: ${client.user.tag}`);
 });
 
-// COMANDO PRA CRIAR O PAINEL
+// COMANDO
 client.on('messageCreate', async (message) => {
 
   if (message.author.bot) return;
 
-  if (message.content === '!verificar') {
+  if (message.content === '!arroz') {
 
     const embed = new EmbedBuilder()
       .setTitle('✅ Verificação')
       .setDescription(`
-Clique no botão abaixo para se verificar e liberar acesso ao servidor.
+Clique no botão abaixo para liberar seu acesso ao servidor.
 
-🔒 Sistema de segurança contra bots
+🔒 Sistema de segurança ativo
       `)
       .setColor('#8A2BE2')
       .setThumbnail('https://media.discordapp.net/attachments/1482528899903782932/1484254280088027216/file_000000008530720eb8922a615208f883.png');
@@ -55,7 +54,7 @@ Clique no botão abaixo para se verificar e liberar acesso ao servidor.
   }
 });
 
-// BOTÃO DE VERIFICAÇÃO
+// BOTÃO
 client.on('interactionCreate', async (interaction) => {
 
   if (!interaction.isButton()) return;
@@ -63,15 +62,40 @@ client.on('interactionCreate', async (interaction) => {
   if (interaction.customId === 'verificar') {
 
     try {
-
-      await interaction.deferReply({ ephemeral: true }); // 🔥 evita erro
+      await interaction.deferReply({ ephemeral: true });
 
       const membro = interaction.member;
+      const guild = interaction.guild;
 
-      // adiciona cargo
-      await membro.roles.add(CARGO_VERIFICADO);
+      // VERIFICA SE CARGO EXISTE
+      const cargo = guild.roles.cache.get(CARGO_VERIFICADO);
 
-      // remove cargo antigo (opcional)
+      if (!cargo) {
+        return interaction.editReply({
+          content: '❌ Cargo não encontrado! Verifique o ID.'
+        });
+      }
+
+      // VERIFICA PERMISSÃO DO BOT
+      const botMember = guild.members.me;
+
+      if (!botMember.permissions.has('ManageRoles')) {
+        return interaction.editReply({
+          content: '❌ Bot sem permissão de Gerenciar Cargos!'
+        });
+      }
+
+      // VERIFICA POSIÇÃO
+      if (cargo.position >= botMember.roles.highest.position) {
+        return interaction.editReply({
+          content: '❌ O cargo está acima do bot! Ajuste a posição.'
+        });
+      }
+
+      // ADICIONA CARGO
+      await membro.roles.add(cargo);
+
+      // REMOVE CARGO ANTIGO (opcional)
       if (CARGO_NAO_VERIFICADO) {
         await membro.roles.remove(CARGO_NAO_VERIFICADO).catch(() => {});
       }
@@ -84,7 +108,7 @@ client.on('interactionCreate', async (interaction) => {
       console.error(err);
 
       await interaction.editReply({
-        content: '❌ Erro ao verificar! Verifique permissões do bot.'
+        content: '❌ Erro desconhecido! Veja o console.'
       });
     }
 
